@@ -26,13 +26,20 @@ app.get("/generate", (req, res) => {
   });
 
   res.send({
-  link: `${req.protocol}://${req.get("host")}/viewer.html?token=${newToken}`
+    link: `${req.protocol}://${req.get("host")}/viewer.html?token=${newToken}`
+  });
 });
-});
+
 // ===== PDF ROUTE =====
 app.get("/pdf", (req, res) => {
-  const token = req.query.token;
 
+  // 🔥 MOBILE BLOCK (NEW)
+  const userAgent = req.headers['user-agent'];
+  if (/Android|iPhone|iPad|iPod|Mobile/i.test(userAgent)) {
+    return res.send("❌ This PDF is only available on Desktop/Laptop");
+  }
+
+  const token = req.query.token;
   const user = tokens.find(t => t.token === token);
 
   if (!user) {
