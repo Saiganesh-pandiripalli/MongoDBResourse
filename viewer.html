@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Mongodb Associate Developer PDF</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+<body>
+
+<h2>Mongodb Associate Developer</h2>
+
+<h3 id="views">Views left: ...</h3>
+
+<div id="pdf-container"></div>
+
+<div id="watermark">Mongodb Associate Developer PDF</div>
+
+<style>
+#watermark {
+  position: fixed;
+  top: 40%;
+  left: 20%;
+  font-size: 40px;
+  color: rgba(0,0,0,0.1);
+  transform: rotate(-30deg);
+  pointer-events: none;
+}
+</style>
+
+<script>
+const params = new URLSearchParams(window.location.search);
+const token = params.get("token");
+
+// ❌ No token
+if (!token) {
+  document.body.innerHTML = "<h2>Invalid link ❌</h2>";
+  throw new Error("No token found");
+}
+
+const url = "/pdf?token=" + token;
+
+const pdfjsLib = window['pdfjs-dist/build/pdf'];
+pdfjsLib.GlobalWorkerOptions.workerSrc =
+  "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js";
+
+async function loadPDF() {
+  try {
+    const response = await fetch(url);
+
+    // 🔥 CHECK IF NOT PDF (limit exceeded case)
+    const contentType = response.headers.get("content-type");
+
+    if (!contentType || !contentType.includes("application/pdf")) {
+      const text = await response.text();
+      document.getElementById("pdf-container").innerHTML =
+        "<h2 style='color:red'>" + text + "</h2>";
+      return;
+    }
+
+    // ✔ Show remaining views
+    const viewsLeft = response.headers.get("X-Views-Left");
+    if (viewsLeft) {
+      document.getElementById("views").innerText =
+        "Views left: " + viewsLeft;
+    }
+
+    // ✔ Load PDF
+    const data = await response.arrayBuffer();
+    const pdf = await pdfjsLib.getDocument({ data }).promise;
+
+    const container = document.getElementById("pdf-container");
+    container.innerHTML = "";
+
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const page = await pdf.getPage(i);
+
+      const canvas = document.createElement("canvas");
+      const ctx = canvas.getContext("2d");
+
+      const viewport = page.getViewport({ scale: 1.5 });
+      canvas.height = viewport.height;
+      canvas.width = viewport.width;
+
+      await page.render({
+        canvasContext: ctx,
+        viewport: viewport
+      });
+
+      container.appendChild(canvas);
+    }
+
+  } catch (err) {
+    console.error("PDF ERROR:", err);
+    document.getElementById("pdf-container").innerHTML =
+      "<h3>Failed to load PDF ❌</h3>";
+  }
+}
+
+loadPDF();
+
+// 🔒 Disable actions
+document.addEventListener("contextmenu", e => e.preventDefault());
+document.addEventListener("copy", e => e.preventDefault());
+document.addEventListener("keydown", e => {
+  if (e.ctrlKey && (e.key === 's' || e.key === 'p')) {
+    e.preventDefault();
+  }
+});
+document.addEventListener("keydown", function(e) {
+  if (e.key === "F12") e.preventDefault();
+  if (e.ctrlKey && e.shiftKey && e.key === "I") e.preventDefault();
+});
+</script>
+
+</body>
+</html>
